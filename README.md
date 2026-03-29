@@ -1,27 +1,93 @@
-# Mrtgexchg
+# Hyperledger Mortgage UI
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 1.6.7.
+A frontend for visualizing real-time blockchain ledger data from a Hyperledger Fabric network. Connects to three fabric channels — Records, Lending, and Books — and displays transaction blocks as expandable Material cards.
 
-## Development server
+Part of a larger mortgage exchange system where the blockchain tracks every step of the mortgage lifecycle. This UI is the read layer that lets you browse transaction blocks across channels, inspect their payloads, and understand the ledger state.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## What it does
 
-## Code scaffolding
+- **Channel switching** — Three buttons at the top let you toggle between blockchain channels: Records (property registry), Lending (loan lifecycle), and Books (title transfers)
+- **Live ledger data** — Pulls block data from a Hyperledger Fabric REST API running on localhost:5000
+- **Expandable cards** — Each transaction block renders as a Material card with the block key as header and the full JSON record collapsible inside
+- **Channel icons** — Each channel type gets a corresponding institution icon (bank for lending, registry for records, title for books)
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Architecture
 
-## Build
+```
+┌─────────────────────────┐         ┌──────────────────────────┐
+│   Angular App (:3000)   │         │  Hyperledger Fabric API  │
+│                         │  HTTP   │       (:5000)            │
+│  [Records] [Lending]    │────────►│                          │
+│    [Books]              │         │  GET /records            │
+│                         │◄────────│  GET /lending            │
+│  ┌───────────────────┐  │  JSON   │  GET /books              │
+│  │ Material Card     │  │         │                          │
+│  │ Key: "block_001"  │  │         │  Hyperledger Fabric      │
+│  │ Record: { ... }   │  │         │  Peer nodes + Orderer    │
+│  └───────────────────┘  │         └──────────────────────────┘
+│  ┌───────────────────┐  │
+│  │ Material Card     │  │
+│  │ Key: "block_002"  │  │
+│  │ Record: { ... }   │  │
+│  └───────────────────┘  │
+└─────────────────────────┘
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `-prod` flag for a production build.
+## Tech Stack
 
-## Running unit tests
+- **Angular 5** with TypeScript
+- **Angular Material** — Cards, buttons, toolbar
+- **RxJS** — Observable-based HTTP calls
+- **Hyperledger Fabric REST API** — Backend serving ledger channel data
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## Project Structure
 
-## Running end-to-end tests
+```
+src/app/
+├── app.component.*      # Main view — channel buttons + card grid
+├── app.module.ts        # Module with Material imports
+├── data.service.ts      # HTTP service — GET /records, /lending, /books
+├── images.ts            # Maps channel icons to institution logos
+└── queryResult.ts       # Block data model (Key + Record)
 
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+src/assets/
+└── *.svg, *.png         # Institution logos (bank, FICO, appraiser, registrar)
+```
 
-## Further help
+## API Contract
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+The app expects a Hyperledger Fabric REST API on `localhost:5000` returning:
+
+```json
+[
+  {
+    "Key": "block_001",
+    "Record": {
+      "CustID": "C001",
+      "RealEstateID": "RE100",
+      "LoanAmount": "350000",
+      "Status": "Approved",
+      "TransactionHistory": "2018-11-15T10:30:00Z"
+    }
+  }
+]
+```
+
+Three endpoints: `GET /records`, `GET /lending`, `GET /books`
+
+## Running it
+
+```bash
+npm install
+npm start              # http://localhost:3000
+```
+
+Requires the Hyperledger Fabric REST API running on port 5000 with the three channel endpoints.
+
+## Related
+
+The static version of this UI is in the [mortgage-ledger-ui](https://github.com/ArghaRay00/mortgage-ledger-ui) repo — that one reads from a JSON file instead of a live Fabric network.
+
+## Note
+
+This was part of a mortgage exchange blockchain project from 2018. Angular 5 is outdated but the pattern of consuming blockchain ledger data through a REST API and rendering it in a card-based UI is what this demonstrates.
